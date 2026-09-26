@@ -59,7 +59,33 @@ main.ready{opacity:1}
 .final h3{font-size:clamp(2.5rem,9vw,5.5rem)}
 .final p{font-size:1.1rem;line-height:1.8;color:#e7dce0}
 .music{position:fixed;right:14px;bottom:14px;z-index:20;border:1px solid rgba(255,255,255,.22);background:rgba(18,9,14,.75);color:white;border-radius:999px;padding:10px 14px;backdrop-filter:blur(10px);cursor:pointer}
-#player{position:fixed;width:1px;height:1px;left:-20px;bottom:-20px;border:0;opacity:.01;pointer-events:none}
+#player{position:fixed;width:1px;height:1px;left:-20px;bottom:-20px;opacity:0;pointer-events:none}
+
+/* Animaciones románticas y sutiles */
+.fx-reveal{opacity:0;transform:translateY(42px) scale(.985);transition:opacity 1s ease,transform 1s cubic-bezier(.2,.7,.2,1);}
+.fx-reveal.is-visible{opacity:1;transform:none;}
+.card.fx-reveal{transition-duration:1.05s;}
+.card.is-visible{transform:none;}
+.gallery .card:nth-child(2){transition-delay:.08s}.gallery .card:nth-child(3){transition-delay:.16s}.gallery .card:nth-child(4){transition-delay:.24s}
+.hero-content{animation:heroIn 1.5s cubic-bezier(.2,.7,.2,1) .15s both;}
+.hero img{animation:slowZoom 12s ease-in-out infinite alternate;}
+.open{position:relative;overflow:hidden;transition:transform .3s ease,box-shadow .3s ease,background .3s ease;}
+.open:after{content:"";position:absolute;top:-30%;left:-45%;width:28%;height:160%;background:rgba(255,255,255,.2);transform:rotate(20deg);animation:shine 3.8s ease-in-out infinite;}
+.open:active{transform:scale(.97)}
+.quote .big,.letter .emphasis{animation:softPulse 4s ease-in-out infinite;}
+.reveal{position:relative;overflow:hidden;}
+.reveal:before{content:"";position:absolute;inset:-50%;background:radial-gradient(circle,rgba(255,220,170,.09),transparent 55%);animation:glow 6s ease-in-out infinite;}
+.reveal>*{position:relative;z-index:1;}
+.final>div{animation:floatIn 1.2s ease both;}
+.heart-particle{position:fixed;z-index:4;pointer-events:none;font-size:14px;opacity:0;animation:heartFloat 4.8s ease-out forwards;}
+@keyframes heroIn{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:none}}
+@keyframes slowZoom{from{transform:scale(1.03)}to{transform:scale(1.09)}}
+@keyframes shine{0%,55%{left:-45%}100%{left:125%}}
+@keyframes softPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.025)}}
+@keyframes glow{0%,100%{transform:translate(-4%,-3%) scale(.95);opacity:.6}50%{transform:translate(4%,3%) scale(1.05);opacity:1}}
+@keyframes floatIn{from{opacity:0;transform:translateY(25px)}to{opacity:1;transform:none}}
+@keyframes heartFloat{0%{opacity:0;transform:translateY(10px) scale(.7) rotate(0deg)}15%{opacity:.7}100%{opacity:0;transform:translateY(-120px) scale(1.15) rotate(18deg)}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}.fx-reveal{opacity:1;transform:none}}
 @media(min-width:720px){.section{padding-top:110px;padding-bottom:110px}.gallery{grid-template-columns:repeat(2,1fr)}.gallery .card:first-child{grid-column:span 2}.letter{padding:55px 65px}}
 </style>
 </head>
@@ -73,7 +99,7 @@ main.ready{opacity:1}
   </div>
 </div>
 
-<iframe id="player" title="Música de fondo" allow="autoplay; encrypted-media"></iframe>
+<audio id="player" preload="auto" loop playsinline src="te-voy-a-amar.mp3"></audio>
 
 <main id="main">
 <section class="hero">
@@ -206,10 +232,21 @@ const openBtn = document.getElementById('openBtn');
 const musicBtn = document.getElementById('musicBtn');
 let playing = false;
 
-function startMusic() {
-  player.src = "https://www.youtube.com/embed/KJC3TGwG8jw?autoplay=1&loop=1&playlist=KJC3TGwG8jw&controls=0&playsinline=1&rel=0";
-  playing = true;
-  musicBtn.textContent = "♫ Música: ON";
+async function startMusic() {
+  try {
+    await player.play();
+    playing = true;
+    musicBtn.textContent = "♫ Música: ON";
+  } catch (err) {
+    playing = false;
+    musicBtn.textContent = "♫ Tocar música";
+  }
+}
+
+function stopMusic() {
+  player.pause();
+  playing = false;
+  musicBtn.textContent = "♫ Música";
 }
 
 openBtn.addEventListener('click', () => {
@@ -217,17 +254,51 @@ openBtn.addEventListener('click', () => {
   main.classList.add('ready');
   startMusic();
   setTimeout(() => window.scrollTo({top: 0, behavior: 'smooth'}), 100);
+  setTimeout(() => createHeart(), 850);
 });
 
 musicBtn.addEventListener('click', () => {
-  // Si ya inició, el botón vuelve a cargar el reproductor sin sonido visible.
   if (!playing) startMusic();
-  else {
-    player.src = "";
-    playing = false;
-    musicBtn.textContent = "♫ Música";
-  }
+  else stopMusic();
 });
+
+// Aparición elegante de cada capítulo y fotografía al entrar en pantalla.
+const animatedItems = document.querySelectorAll('.section, .final, .gallery .card, .reveal');
+animatedItems.forEach(el => el.classList.add('fx-reveal'));
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('is-visible');
+      observer.unobserve(entry.target);
+    }
+  });
+}, {threshold:.14, rootMargin:'0px 0px -8% 0px'});
+animatedItems.forEach(el => observer.observe(el));
+
+// Parallax muy suave en la portada: movimiento al deslizar, sin marear.
+const heroImg = document.querySelector('.hero img');
+window.addEventListener('scroll', () => {
+  if (!heroImg || window.scrollY > window.innerHeight * 1.1) return;
+  heroImg.style.transform = `scale(1.06) translateY(${Math.min(window.scrollY * .055, 28)}px)`;
+}, {passive:true});
+
+// Pequeños corazones flotantes al abrir la historia y en algunos cambios de capítulo.
+function createHeart() {
+  const h = document.createElement('span');
+  h.className = 'heart-particle';
+  h.textContent = Math.random() > .35 ? '♥' : '♡';
+  h.style.left = (12 + Math.random()*76) + 'vw';
+  h.style.bottom = (12 + Math.random()*12) + 'vh';
+  document.body.appendChild(h);
+  setTimeout(() => h.remove(), 5000);
+}
+let lastHeart = 0;
+window.addEventListener('scroll', () => {
+  const now = Date.now();
+  if (now - lastHeart < 3200) return;
+  const progress = window.scrollY / Math.max(document.documentElement.scrollHeight - innerHeight, 1);
+  if (progress > .18 && progress < .92) { lastHeart = now; createHeart(); }
+}, {passive:true});
 </script>
 </body>
 </html>
